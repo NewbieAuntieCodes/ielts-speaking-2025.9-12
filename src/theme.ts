@@ -1,5 +1,6 @@
-// FIX: Replaced the side-effect import with an empty named import to ensure TypeScript recognizes the module for augmentation.
-import {} from 'styled-components';
+// FIX: The side-effect import for 'styled-components' was redundant because 'createGlobalStyle' is already imported from the same module.
+// This redundancy can sometimes cause module resolution issues with certain bundlers.
+// The named import is sufficient for module augmentation to work.
 import { createGlobalStyle } from 'styled-components';
 
 export const theme = {

@@ -43,7 +43,7 @@ export const preExamples = [
             { type: 'text', text: ". " },
             { type: 'reason', text: "I think it's a fantastic way to unwind and escape from reality for a bit" },
             { type: 'text', text: ". " },
-            { type: 'example', text: "For instance, last weekend I watched a new sci-fi movie, and it was so immersive that I completely forgot about all my work stress" },
+            { type: 'example', text: "For instance, last weekend I watched a new sci-fi movie, and it was so engaging that I completely forgot about all my work stress" },
             { type: 'text', text: "." },
         ]),
         legend: [

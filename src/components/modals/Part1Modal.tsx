@@ -17,6 +17,7 @@ const Part1Modal: React.FC<Part1ModalProps> = ({ card, onClose }) => {
     // State for the answers view
     const [selectedScore, setSelectedScore] = useState(initialScore);
     const [copyStatus, setCopyStatus] = useState<{[key: number]: 'idle' | 'copied'}>({});
+    const [copyAllStatus, setCopyAllStatus] = useState<'idle' | 'copied'>('idle');
 
     useEffect(() => {
         // Reset view when card changes
@@ -26,10 +27,14 @@ const Part1Modal: React.FC<Part1ModalProps> = ({ card, onClose }) => {
     useEffect(() => {
         // When entering answer view, sync the selected score
         setSelectedScore(initialScore);
-        // Reset copy statuses
-        setCopyStatus({});
     }, [showAnswersView, initialScore]);
     
+    useEffect(() => {
+        // When score changes, reset all copy statuses
+        setCopyStatus({});
+        setCopyAllStatus('idle');
+    }, [selectedScore]);
+
     const handleModalContentClick = (e: React.MouseEvent) => {
         e.stopPropagation();
     };
@@ -68,6 +73,36 @@ const Part1Modal: React.FC<Part1ModalProps> = ({ card, onClose }) => {
         }).catch(err => {
             console.error("Could not copy text: ", err);
         });
+    };
+    
+    const handleCopyAll = () => {
+        if (!card.sampleAnswers) return;
+
+        const allText = card.sampleAnswers.map((qa, index) => {
+            const version = qa.versions.find(v => v.score === selectedScore);
+            if (!version) return '';
+
+            const questionText = `${index + 1}. ${qa.question}`;
+            
+            let answerText = '';
+            if (Array.isArray(version.answer)) {
+                answerText = version.answer.join('\n\n');
+            } else {
+                const paragraphs = version.answer.split(/<br\s*\/?>\s*<br\s*\/?>/gi);
+                answerText = paragraphs.map(p => p.replace(/<\/?[^>]+(>|$)/g, "").trim()).join('\n\n');
+            }
+        
+            return `**${questionText}**\n\n${answerText}`;
+        }).filter(Boolean).join('\n\n\n');
+
+        if (allText) {
+            navigator.clipboard.writeText(allText).then(() => {
+                setCopyAllStatus('copied');
+                setTimeout(() => setCopyAllStatus('idle'), 2000);
+            }).catch(err => {
+                console.error("Could not copy all text: ", err);
+            });
+        }
     };
 
     // View 1: Question List
@@ -130,11 +165,26 @@ const Part1Modal: React.FC<Part1ModalProps> = ({ card, onClose }) => {
             </ModalHeaderP1>
             <ModalContentP1>
                 <ScoreSelector>
-                    {availableScores.map(score => (
-                        <ScoreButton key={score} $active={score === selectedScore} onClick={() => setSelectedScore(score)}>
-                            {score}分
-                        </ScoreButton>
-                    ))}
+                    <ScoreButtonsWrapper>
+                        {availableScores.map(score => (
+                            <ScoreButton key={score} $active={score === selectedScore} onClick={() => setSelectedScore(score)}>
+                                {score}分
+                            </ScoreButton>
+                        ))}
+                    </ScoreButtonsWrapper>
+                    <CopyAllButton onClick={handleCopyAll} disabled={copyAllStatus === 'copied'}>
+                        {copyAllStatus === 'copied' ? (
+                            <>
+                                <CheckIcon />
+                                <span>已复制</span>
+                            </>
+                        ) : (
+                            <>
+                                <CopyIcon />
+                                <span>复制整页</span>
+                            </>
+                        )}
+                    </CopyAllButton>
                 </ScoreSelector>
 
                 <AnswersList>
@@ -356,10 +406,22 @@ const ScoreNavButton = styled.button`
 // --- NEW STYLES for Answer View ---
 
 const ScoreSelector = styled.div`
-    display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
     border-bottom: 1px solid ${({ theme }) => theme.colors.border};
     padding-bottom: 1.5rem;
 `;
+
+const ScoreButtonsWrapper = styled.div`
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+`;
+
 const ScoreButton = styled.button<{ $active: boolean }>`
     font-family: inherit; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem;
     border-radius: 9999px; border: 1px solid ${({ theme }) => theme.colors.border};
@@ -369,6 +431,44 @@ const ScoreButton = styled.button<{ $active: boolean }>`
     &:hover {
         border-color: ${({ theme, $active }) => $active ? theme.colors.primaryOrange : theme.colors.header};
         color: ${({ theme, $active }) => $active ? 'white' : theme.colors.header};
+    }
+`;
+
+const CopyAllButton = styled.button`
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background-color: ${({ theme }) => theme.colors.boxBg};
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: ${({ theme }) => theme.colors.label};
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    &:hover:not(:disabled) {
+        background-color: ${({ theme }) => theme.colors.border};
+        color: ${({ theme }) => theme.colors.header};
+    }
+
+    &:disabled {
+        cursor: default;
+        color: ${({ theme }) => theme.colors.placeText};
+        border-color: ${({ theme }) => theme.colors.placeBg};
+        background-color: ${({ theme }) => theme.colors.placeBg};
+
+        svg {
+            color: ${({ theme }) => theme.colors.placeText};
+        }
     }
 `;
 
